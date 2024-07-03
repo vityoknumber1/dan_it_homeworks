@@ -1,0 +1,208 @@
+Exercise 1
+
+nano hello.sh
+
+#!/bin/bash
+echo "Hello, World!"
+
+chmod +x hello.sh
+
+./hello.sh
+
+
+Exercise 2
+
+nano greeting.sh
+
+#!/bin/bash
+read -p "Enter your name: " name
+
+echo "Welcome, $name"
+
+chmod +x greeting.sh
+
+bash greeting.sh
+
+
+Exercise 3
+
+touch file.txt
+
+nano check-file.sh
+
+#!/bin/bash
+
+TARGET_FILE="$(pwd)/file.txt"
+
+if test -f "$TARGET_FILE"
+then
+     echo "$TARGET_FILE exists."
+else
+     echo "$TARGET_FILE doesn't exists."
+fi
+
+
+chmod +x check-file.sh
+
+bash check-file.sh
+
+
+
+Exercise 4
+
+nano looping.sh
+
+#/bin/bash
+echo "Numbers 1 to 10: "
+
+for ((i=1; i<=10; i++ ))
+do
+     echo -n "$i "
+done
+
+
+chmod +x looping.sh
+
+./looping.sh
+
+
+Exercise 5
+
+touch file5.txt
+
+nano copy-files.sh
+
+#/bin/bash
+$1
+$2
+
+cp "$1"/file5.txt "$2"/test.txt
+
+echo "File is copied"
+
+
+chmod +x copy-files.sh
+
+./copy-files.sh $(pwd)/ $(pwd)/
+
+
+Exercise 6
+
+nano reverse.sh
+
+#/bin/bash
+
+read -p "Enter the sentence: " str
+
+echo $(tac -s ' ' <<< $str)
+
+
+chmod +x reverse.sh
+
+bash reverse.sh
+
+
+
+Exercise 7
+
+touch file7
+
+nano lines.sh
+
+#/bin/bash
+read -p "Enter a filename: " ($pwd)/$1
+
+echo "Number of lines in $1 `wc -l < $1`"
+
+chmod +x lines.sh
+
+./lines.sh file7
+
+
+
+Exercise 8
+
+nano fruits.sh
+
+#/bin/bash
+fruits=('apple' 'banana' 'cherry')
+for fruit in "${fruits[@]}"
+do
+     echo "$fruit"
+done
+
+
+chmod +x fruits.sh
+
+./fruits.sh
+
+
+
+Exercise 9
+
+touch file9.txt
+
+nano check-file9.sh
+
+#!/bin/bash
+
+TARGET_FILE="$(pwd)/file9.txt"
+
+if test -f "$TARGET_FILE"
+then
+     echo "`cat $TARGET_FILE`"
+else
+     trap
+	echo "Error: Command failed with exit status $?" >&2
+        exit 2
+fi
+
+
+chmod +x check-file9.sh
+
+bash check-file9.sh
+
+
+
+Systemd #1
+
+apt-get install inotify-tools
+
+nano watching.sh
+
+#/bin/bash
+while inotifywait -r ~/watch -e create file; 
+	do 
+		if [["$file" ~= .*]]; then
+		echo "`cat $file`"
+		mv "$file" *.back
+		fi
+	done
+
+
+chmod +x watching.sh
+
+bash watching.sh
+
+
+Systemd #2
+
+nano /lib/systemd/system/checkfile.service
+
+[Unit]
+Description = Run inotifywait in background
+
+[Service]
+User=viktor
+Group=viktor
+ExecStart=/bin/bash /home/viktor/dan_it_homeworks/HW2/watching.sh
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+
+sudo systemctl daemon-reload
+
+sudo systemctl enable checkfile
+sudo systemctl start checkfile
