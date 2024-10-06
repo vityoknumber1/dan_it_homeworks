@@ -1,0 +1,43 @@
+name: dan-it_step_project_2
+
+services:
+  server:
+    build:
+      context: ./server
+    image: ${COMPOSE_PROJECT_NAME}_server:1.0.1
+    container_name: ${COMPOSE_PROJECT_NAME}_server
+    hostname: ${COMPOSE_PROJECT_NAME}_server
+    user: "${UID}:${GID}"
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - ./jenkins_home:/var/jenkins_home
+    networks:
+      _network:
+
+  worker:
+    privileged: true
+    user: "${UID}:${GID}"
+    build:
+      context: ./worker
+    image: ${COMPOSE_PROJECT_NAME}_worker:1.0.1
+    container_name: ${COMPOSE_PROJECT_NAME}_worker
+    hostname: ${COMPOSE_PROJECT_NAME}_worker
+    environment:
+      JENKINS_SECRET: e33eb4d4fb0049778ac9df18bf808ad9
+      JENKINS_AGENT_WORKDIR: /var/lib/jenkins
+      JENKINS_URL: http://server:8080/
+      JENKINS_AGENT_NAME: worker
+    volumes:
+      - ./jenkins_worker:/var/lib/jenkins
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /usr/bin/docker:/usr/bin/docker:ro
+      - /usr/libexec/docker/cli-plugins:/usr/libexec/docker/cli-plugins
+    depends_on:
+      - server
+    networks:
+      _network:
+
+networks:
+  _network:
