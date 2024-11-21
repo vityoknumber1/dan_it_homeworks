@@ -1,0 +1,79 @@
+- name: Install required packages for Docker
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - software-properties-common
+    state: present
+    update_cache: true
+
+- name: Add Docker GPG key
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker repository
+  ansible.builtin.apt_repository:
+    repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu jammy stable
+    state: present
+
+- name: Install Docker and related packages
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: true
+  loop:
+    - docker-ce
+    - docker-ce-cli
+    - containerd.io
+    - docker-buildx-plugin
+    - docker-compose-plugin
+
+- name: Add Docker group
+  ansible.builtin.group:
+    name: docker
+    state: present
+
+- name: Add user to Docker group
+  ansible.builtin.user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: true
+
+- name: Install Docker Compose
+  ansible.builtin.get_url:
+    url: https://github.com/docker/compose/releases/download/v2.30.3/docker-compose-linux-x86_64
+    dest: /usr/local/bin/docker-compose
+    mode: '0755'
+
+- name: Pull Nginx image
+  community.docker.docker_image:
+    name: nginx
+    source: pull
+
+- name: Copy Docker Compose file
+  ansible.builtin.copy:
+    src: docker/docker-compose.yml
+    dest: /home/ubuntu/docker-compose.yml
+    mode: '0755'
+
+- name: Run Nginx with Docker Compose
+  ansible.builtin.command: docker-compose up -d
+  register: run_docker_compose
+  changed_when: run_docker_compose.rc != 0
+  failed_when: run_docker_compose.rc != 0
+
+- name: Verify Nginx container is running
+  ansible.builtin.command: docker ps
+  register: docker_ps_output
+  changed_when: docker_ps_output.rc != 0
+  failed_when: docker_ps_output.rc != 0
+  tags:
+    - check_nginx
+
+- name: Print Docker ps output
+  ansible.builtin.debug:
+    var: docker_ps_output.stdout
+  tags:
+    - check_nginx

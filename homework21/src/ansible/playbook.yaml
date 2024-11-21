@@ -1,0 +1,6 @@
+- name: DAN-IT_HW_21
+  hosts: servers
+  become: true
+  roles:
+    - update
+    - docker
