@@ -1,0 +1,9 @@
+---
+- name: Configure Jenkins Master
+  hosts: master
+  become: true
+
+  roles:
+    - update
+    - jenkins
+    - nginx_proxy

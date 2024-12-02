@@ -1,0 +1,16 @@
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+
+
+- name: Install Java and other dependencies
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - curl
+    - gnupg2
+    - ca-certificates
+    - apt-transport-https
+    - nginx
+    - openjdk-17-jdk

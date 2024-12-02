@@ -1,0 +1,47 @@
+- name: Add Jenkins repository key
+  block:
+    - name: Download Jenkins repository key
+      ansible.builtin.get_url:
+        url: "{{ jenkins_repo_key }}"
+        dest: /tmp/jenkins.io.key
+        mode: '0644'
+
+    - name: Convert key to GPG format
+      ansible.builtin.command: gpg --dearmor -o /usr/share/keyrings/jenkins-keyring.gpg /tmp/jenkins.io.key
+      args:
+        creates: /usr/share/keyrings/jenkins-keyring.gpg
+
+    - name: Clean up temporary key file
+      ansible.builtin.file:
+        path: /tmp/jenkins.io.key
+        state: absent
+
+- name: Add Jenkins repository
+  ansible.builtin.copy:
+    content: "deb [signed-by=/usr/share/keyrings/jenkins-keyring.gpg] {{ jenkins_repo_url }} binary/"
+    dest: /etc/apt/sources.list.d/jenkins.list
+    mode: preserve
+
+- name: Update apt cache after adding Jenkins repo
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install Jenkins
+  ansible.builtin.apt:
+    name: jenkins
+    state: present
+
+- name: Ensure Jenkins is enabled and started
+  ansible.builtin.systemd:
+    name: jenkins
+    state: started
+    enabled: true
+
+- name: Display initial Jenkins admin password
+  ansible.builtin.command: cat /var/lib/jenkins/secrets/initialAdminPassword
+  register: jenkins_admin_password
+  changed_when: false
+
+- name: Show Jenkins initial admin password
+  ansible.builtin.debug:
+    msg: "Initial Jenkins Admin Password: {{ jenkins_admin_password.stdout }}"

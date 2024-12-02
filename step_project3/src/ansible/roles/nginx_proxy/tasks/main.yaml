@@ -1,0 +1,30 @@
+- name: Configure nginx
+  ansible.builtin.template:
+    src: nginx_proxy.conf.j2
+    dest: /etc/nginx/sites-available/jenkins
+    mode: '0644'
+
+- name: Remove default nginx sire
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+
+- name: Add www-data user to jenkins group
+  ansible.builtin.user:
+    name: www-data
+    groups: jenkins
+    append: true
+
+- name: Start Jenkins
+  ansible.builtin.file:
+    src: /etc/nginx/sites-available/jenkins
+    dest: /etc/nginx/sites-enabled/jenkins
+    state: link
+  notify:
+    - Restart_Nginx
+
+- name: Ensure Nginx is started and enabled
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+    enabled: true
