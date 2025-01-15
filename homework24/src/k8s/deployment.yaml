@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hw24-deployment
+  labels:
+    app: hw24-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hw24-app
+  template:
+    metadata:
+      labels:
+        app: hw24-app
+    spec:
+      containers:
+        - name: hw24-app-container
+          image: v2324/hw_24:1.0.1
+          ports:
+            - containerPort: 8082
