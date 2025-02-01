@@ -1,0 +1,72 @@
+workflow:
+  rules:
+    - if: '$CI_COMMIT_MESSAGE =~ /.*Update deployment image to version.*/'
+      when: never
+    - when: always
+
+variables:
+  IMAGE_NAME: "v2324/sp_4"
+  VERSION_PREFIX: "1.0"
+
+stages:
+  - test
+  - build
+  - deploy
+
+test:
+  stage: test
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build --target test . -f app/Dockerfile
+
+build:
+  stage: build
+  only:
+    - main # Ensure changes are only made on specific branches
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - VERSION="${VERSION_PREFIX}.${CI_PIPELINE_IID}"
+    # Login to Docker Hub
+    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+    - docker build -t $IMAGE_NAME:$VERSION . -f app/Dockerfile
+    - docker push $IMAGE_NAME:$VERSION
+    - |
+      sed -i "s|image: v2324/sp_4:.*|image: v2324/sp_4:$VERSION|" k8s-deployment.yaml
+    # Configure Git user
+    - git config --global user.email "gitlab-ci@amb.com"
+    - git config --global user.name "GitLab CI Bot"
+
+    # Commit and push changes
+    - git add k8s-deployment.yaml
+    - git commit -m "Update deployment image to version $VERSION"
+    - git push https://viktor_k1997:${GITLAB_TOKEN}@gitlab.com/viktor_k1997/dan_it_step_project_4.git HEAD:main
+
+deploy:
+  stage: deploy
+  image:
+    name: amazon/aws-cli
+    entrypoint: ['']
+  script:
+    # Install kubectl
+    - curl -LO https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl
+    - chmod +x kubectl
+    - mv kubectl /usr/local/bin/
+
+    # Configure AWS credentials
+    - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+    - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+    - aws configure set region $AWS_REGION
+
+    # Update EKS cluster config
+    - aws eks update-kubeconfig --name $EKS_CLUSTER_NAME
+
+    # Update deployment using patch
+    - VERSION="${VERSION_PREFIX}.${CI_PIPELINE_IID}"
+    - |
+      kubectl patch deployment flask-sp-4 \
+        -p '{"spec":{"template":{"spec":{"containers":[{"name":"flask-api","image":"v2324/sp_4:'"$VERSION"'"}]}}}}' \
+        -n boiko-app

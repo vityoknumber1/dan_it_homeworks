@@ -1,0 +1,111 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kysil-mysql
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: kysil-ebs-sc
+provisioner: ebs.csi.aws.com
+volumeBindingMode: WaitForFirstConsumer
+parameters:
+  type: gp3
+  encrypted: "true"
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: kysil-sp-4-mysql-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: kysil-ebs-sc
+  awsElasticBlockStore:
+    volumeID: "vol-060be9f3f72caef80"  # Replace with actual EBS volume ID
+    fsType: ext4
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kysil-mysql-pvc
+  namespace: kysil-mysql
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: kysil-ebs-sc
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+  namespace: kysil-mysql
+type: Opaque
+data:
+  MYSQL_DATABASE: c3BfNF9kYg==         # Base64 encoded "sp_4_db"
+  MYSQL_USER: Zmxhc2stdXNlcg==         # Base64 encoded "flask-user"
+  MYSQL_PASSWORD: Zmxhc2stcGFzc3dvcmQ= # Base64 encoded "flask-password"
+stringData:
+  ROOT_PASSWORD: "qazxswedc"  # Replace with a strong password
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-sp-4
+  namespace: kysil-mysql
+spec:
+  selector:
+    app: mysql-sp-4
+  ports:
+    - port: 3306
+      targetPort: 3306
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-sp-4
+  namespace: kysil-mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-sp-4
+  template:
+    metadata:
+      labels:
+        app: mysql-sp-4
+    spec:
+      containers:
+        - name: mysql-sp-4
+          image: mysql:8.0
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: ROOT_PASSWORD
+          envFrom:
+            - secretRef:
+                name: mysql-secret
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: mysql-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: kysil-mysql-pvc
