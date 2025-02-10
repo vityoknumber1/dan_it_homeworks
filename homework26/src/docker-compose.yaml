@@ -1,0 +1,36 @@
+name: homework_26
+
+services:
+  elasticsearch:
+    image: elasticsearch:7.17.25
+    container_name: ${COMPOSE_PROJECT_NAME}_elasticsearch
+    environment:
+      discovery.type: 'single-node'
+      xpack.security.enabled: 'false'
+      ES_JAVA_OPTS: '-Xms1g -Xmx1g'
+    ports:
+      - "9200:9200"
+    volumes:
+      - elastic:/usr/share/elasticsearch/data
+
+  fluentd:
+    build:
+      context: ./fluentd
+    container_name: ${COMPOSE_PROJECT_NAME}_fluentd
+    image: ${COMPOSE_PROJECT_NAME}_fluentd:1.0.1
+    depends_on:
+      - elasticsearch
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+
+  kibana:
+    container_name: ${COMPOSE_PROJECT_NAME}_kibana
+    image: kibana:7.17.25
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+
+volumes:
+  elastic:
