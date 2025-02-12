@@ -1,0 +1,15 @@
+{{ define "telegram.default" }}
+🚨 <b>{{ .Status | toUpper }} - {{ .CommonLabels.alertname }} </b>
+📌 <b>Instance:</b> {{ .CommonLabels.instance }}
+📝<b>Description:</b> {{ .CommonAnnotations.description }}
+📊 <b>Severity:</b> {{ .CommonLabels.severity }}
+🕒 <b>Time:</b>
+-------------------------
+{{ range .Alerts }}
+Start: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+{{ if eq $.Status "resolved" }}
+End: {{ .EndsAt.Format "2006-01-02 15:04:05" }}
+{{ end }}
+{{ end }}
+-------------------------
+{{ end }}
